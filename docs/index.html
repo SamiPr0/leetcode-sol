@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode Tracker</title>
+<style>
+  :root {
+    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --card: #ffffff; --line: #e7e5e4;
+    --easy: #4c8b5e; --medium: #a8902f; --hard: #b04a4a; --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --fg: #f5f5f4; --muted: #a8a29e; --card: #1c1b1a; --line: #2e2c2a;
+      --easy: #6cb582; --medium: #d4bd5c; --hard: #d97878; --accent: #60a5fa;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141413; --fg: #f5f5f4; --muted: #a8a29e; --card: #1c1b1a; --line: #2e2c2a;
+    --easy: #6cb582; --medium: #d4bd5c; --hard: #d97878; --accent: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 8px 14px; min-width: 96px; }
+  .stat b { display: block; font-size: 1.4rem; line-height: 1.2; }
+  .stat span { color: var(--muted); font-size: .8rem; }
+  .Easy b { color: var(--easy); } .Medium b { color: var(--medium); } .Hard b { color: var(--hard); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  input[type=search] { flex: 1 1 200px; padding: 8px 12px; border-radius: 8px; font: inherit;
+         border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+  button.f { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer;
+         background: var(--card); color: var(--fg); font: inherit; }
+  button.f[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  tr:last-child td { border-bottom: 0; }
+  td.n { color: var(--muted); width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+  td.c { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; color: var(--muted); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot.Easy { background: var(--easy); } .dot.Medium { background: var(--medium); }
+  .dot.Hard { background: var(--hard); }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  .msg { color: var(--muted); padding: 24px 0; }
+  @media (max-width: 560px) { th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6) { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>LeetCode Tracker</h1>
+  <p class="sub" id="sub">Loading from GitHub…</p>
+  <div class="stats" id="stats"></div>
+  <div class="controls">
+    <input type="search" id="q" placeholder="Search by number or title" aria-label="Search problems">
+    <button class="f" data-d="All" aria-pressed="true">All</button>
+    <button class="f" data-d="Easy" aria-pressed="false">Easy</button>
+    <button class="f" data-d="Medium" aria-pressed="false">Medium</button>
+    <button class="f" data-d="Hard" aria-pressed="false">Hard</button>
+  </div>
+  <div id="out"></div>
+</main>
+<script>
+// Repo is read from the page URL (user.github.io/repo); the constants are the fallback.
+const host = location.hostname.match(/^(.+)\.github\.io$/);
+const OWNER = host ? host[1] : "SamiPr0";
+const REPO = (host && location.pathname.split("/")[1]) || "leetcode-sol";
+const BRANCH = "main", DIR = "main/";
+const RAW = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/`;
+const BLOB = `https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/`;
+
+let problems = [], diff = "All";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function parse(path, text) {
+  const m = text.match(/Problem:\s*(\d+)\s*-\s*(.+)/);
+  if (!m) return null;
+  const d = text.match(/Difficulty:\s*(\w+)/);
+  const l = text.match(/Link:\s*\n(https?:\/\/\S+)/);
+  const t = text.match(/Time Complexity:\s*\n(.+)/);
+  const s = text.match(/Space Complexity:\s*\n(.+)/);
+  const clean = (x) => (x && !x[1].includes("...") ? x[1].trim() : "");
+  return { number: +m[1], title: m[2].trim(), difficulty: d ? d[1] : "Unknown",
+           link: l ? l[1] : "", code: BLOB + path, time: clean(t), space: clean(s) };
+}
+
+async function load() {
+  const tree = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${BRANCH}?recursive=1`);
+  if (!tree.ok) throw new Error(`GitHub API returned ${tree.status}`);
+  const files = (await tree.json()).tree.filter((f) => f.path.startsWith(DIR) && f.path.endsWith(".py"));
+  const parsed = await Promise.all(files.map(async (f) => {
+    const r = await fetch(RAW + f.path);
+    return r.ok ? parse(f.path, await r.text()) : null;
+  }));
+  problems = parsed.filter(Boolean).sort((a, b) => a.number - b.number);
+}
+
+function render() {
+  const q = $("#q").value.trim().toLowerCase();
+  const rows = problems.filter((p) =>
+    (diff === "All" || p.difficulty === diff) &&
+    (!q || String(p.number).includes(q) || p.title.toLowerCase().includes(q)));
+  $("#out").innerHTML = rows.length
+    ? `<table><thead><tr><th>#</th><th>Title</th><th>Level</th><th>Code</th><th>Time</th><th>Space</th></tr></thead><tbody>` +
+      rows.map((p) => `<tr>
+        <td class="n">${p.number}</td>
+        <td>${p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}</a>` : esc(p.title)}</td>
+        <td><span class="dot ${esc(p.difficulty)}"></span>${esc(p.difficulty)}</td>
+        <td><a href="${esc(p.code)}" target="_blank" rel="noopener">code</a></td>
+        <td class="c">${esc(p.time)}</td><td class="c">${esc(p.space)}</td></tr>`).join("") + `</tbody></table>`
+    : `<p class="msg">No problems match.</p>`;
+}
+
+function stats() {
+  const c = (d) => problems.filter((p) => p.difficulty === d).length;
+  $("#stats").innerHTML =
+    `<div class="stat"><b>${problems.length}</b><span>Solved</span></div>` +
+    ["Easy", "Medium", "Hard"].map((d) => `<div class="stat ${d}"><b>${c(d)}</b><span>${d}</span></div>`).join("");
+  $("#sub").textContent = `Solutions in Python · ${OWNER}/${REPO}`;
+}
+
+document.querySelectorAll("button.f").forEach((b) => b.addEventListener("click", () => {
+  diff = b.dataset.d;
+  document.querySelectorAll("button.f").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  render();
+}));
+$("#q").addEventListener("input", render);
+
+load().then(() => { stats(); render(); }).catch((e) => {
+  $("#sub").textContent = "Could not load problems.";
+  $("#out").innerHTML = `<p class="msg">${esc(String(e.message || e))}. GitHub's API allows 60 requests/hour without a token, so try again later.</p>`;
+});
+</script>
+</body>
+</html>
