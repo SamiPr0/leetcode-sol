@@ -6,18 +6,39 @@ Link:
 https://leetcode.com/problems/combine-two-tables/
 
 Time Complexity:
-O(...)
+O(n*m)
 
 Space Complexity:
-O(...)
+O(n+m)
 
 Notes:
+n : # persons
+m : # addresses
 """
 
 import pandas as pd
 
 def combine_two_tables(person: pd.DataFrame, address: pd.DataFrame) -> pd.DataFrame:
-    pass
+    newTable = []
+    for _, p in person.iterrows():
+        firstName = p["firstName"]
+        lastName = p["lastName"]
+        personId = p["personId"]
+
+        addressRow = address[address["personId"] == personId]
+        if addressRow.empty:
+            city = state = None
+        else:
+            city = addressRow.iloc[0]["city"]
+            state = addressRow.iloc[0]["state"]
+
+        newTable.append({
+            "firstName": firstName, 
+            "lastName": lastName, 
+            "city": city,
+            "state": state
+        })
+    return pd.DataFrame(newTable, columns=['firstName', 'lastName', 'city', 'state'])           
 
 
 def to_records(df):
