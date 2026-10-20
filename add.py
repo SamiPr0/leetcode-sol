@@ -115,6 +115,22 @@ def build_solution(snippet):
     return snippet.rstrip() + "\n        pass"
 
 
+def fill_empty_bodies(snippet):
+    """Add `pass` to any function whose body is empty (e.g. __init__ without a docstring)."""
+    lines = snippet.splitlines()
+    out = []
+    for i, line in enumerate(lines):
+        out.append(line)
+        m = re.match(r"(\s*)def\s.*:\s*$", line)
+        if not m:
+            continue
+        indent = len(m.group(1))
+        nxt = next((l for l in lines[i + 1:] if l.strip()), None)
+        if nxt is None or len(nxt) - len(nxt.lstrip()) <= indent:
+            out.append(" " * (indent + 4) + "pass")
+    return "\n".join(out)
+
+
 def parse_cell(text):
     if text.lower() == "null":
         return None
@@ -282,7 +298,7 @@ def run_tests():
         # Design / class-based problem: keep the template, leave tests to fill in
         body = f"""
 
-{snippets["python"].rstrip()}
+{fill_empty_bodies(snippets["python"].rstrip())}
 
 
 def run_tests():
