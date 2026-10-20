@@ -12,6 +12,7 @@ import urllib.error
 import json
 import re
 import ast
+from html import unescape
 
 
 LEETCODE_GRAPHQL = "https://leetcode.com/graphql"
@@ -114,6 +115,73 @@ def build_solution(snippet):
     return snippet.rstrip() + "\n        pass"
 
 
+def parse_cell(text):
+    if text.lower() == "null":
+        return None
+    for cast in (int, float):
+        try:
+            return cast(text)
+        except ValueError:
+            pass
+    return text
+
+
+def parse_table_outputs(html):
+    """Extract the expected output table of each example of a database problem."""
+    outputs = []
+    for block in re.findall(r"<pre>(.*?)</pre>", html, re.DOTALL):
+        m = re.search(r"<strong>Output:</strong>(.*?)(?:<strong>Explanation|$)", block, re.DOTALL)
+        if not m:
+            continue
+        rows = []
+        for line in m.group(1).splitlines():
+            line = line.strip()
+            if not line.startswith("|"):
+                continue
+            rows.append(
+                [unescape(re.sub(r"<[^>]+>", "", c)).strip() for c in line.strip("|").split("|")]
+            )
+        if not rows:
+            outputs.append(None)
+            continue
+        outputs.append((rows[0], [[parse_cell(c) for c in r] for r in rows[1:]]))
+    return outputs
+
+
+DB_HELPER = '''def to_records(df):
+    """Order-insensitive, NaN-insensitive view of a DataFrame."""
+    records = [
+        {k: (None if pd.isna(v) else v) for k, v in row.items()}
+        for row in df.to_dict("records")
+    ]
+    return sorted(records, key=repr)
+'''
+
+
+def build_database_tests(func_name, snippet, test_cases, outputs):
+    params = re.search(r"def\s+\w+\((.*?)\)", snippet, re.DOTALL).group(1)
+    names = [p.split(":")[0].strip() for p in params.split(",") if p.strip()]
+    lines = []
+    for i, raw in enumerate(test_cases, 1):
+        data = json.loads(raw)
+        lines.append(f"    # Test {i}")
+        for name, table in zip(names, data["headers"]):
+            lines.append(
+                f"    {name} = pd.DataFrame({data['rows'][table]!r}, columns={data['headers'][table]!r})"
+            )
+        lines.append(f"    result = {func_name}({', '.join(names)})")
+        out = outputs[i - 1] if i <= len(outputs) else None
+        if out:
+            columns, body = out
+            lines.append(f"    expected = pd.DataFrame({body!r}, columns={columns!r})")
+            lines.append("    assert to_records(result) == to_records(expected)")
+        else:
+            lines.append("    # TODO: add the expected output")
+        lines.append("")
+    lines.append('    print("All tests passed.")')
+    return "\n".join(lines)
+
+
 def build_tests(method_name, params, test_cases, outputs):
     lines = []
     for i, (raw, expected) in enumerate(zip(test_cases, outputs), 1):
@@ -170,26 +238,10 @@ def main():
     link = f"https://leetcode.com/problems/{slug}/"
     file_title = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")
 
-    py_snippet = next(
-        (s["code"] for s in details["codeSnippets"] or [] if s["langSlug"] == "python"),
-        None,
-    )
-    if py_snippet is None:
-        print(
-            f"Problem {number} ({title}) has no Python template "
-            "(likely a SQL/Database or Shell problem), so it can't be generated."
-        )
-        sys.exit(1)
-    meta = json.loads(details["metaData"])
-    method_name = meta["name"]
-    params = meta["params"]
+    snippets = {s["langSlug"]: s["code"] for s in details["codeSnippets"] or []}
+    meta = json.loads(details["metaData"] or "{}")
     test_cases = details["exampleTestcaseList"]
-
-    outputs = parse_outputs(details["content"])
-    solution_class = build_solution(py_snippet)
-    tests_body = build_tests(method_name, params, test_cases, outputs)
-
-    content = f'''"""
+    header = f'''"""
 Problem: {number} - {title}
 Difficulty: {difficulty}
 
@@ -204,25 +256,75 @@ O(...)
 
 Notes:
 """
-
-
-{solution_class}
-
-
-def run_tests():
-    sol = Solution()
-
-{tests_body}
-
+'''
+    footer = '''
 
 if __name__ == "__main__":
     run_tests()
 '''
 
+    if "python" in snippets and "name" in meta and "params" in meta:
+        # Regular function problem: Solution class + generated asserts
+        outputs = parse_outputs(details["content"])
+        solution = build_solution(snippets["python"])
+        tests = build_tests(meta["name"], meta["params"], test_cases, outputs)
+        body = f"""
+
+{solution}
+
+
+def run_tests():
+    sol = Solution()
+
+{tests}
+"""
+    elif "python" in snippets:
+        # Design / class-based problem: keep the template, leave tests to fill in
+        body = f"""
+
+{snippets["python"].rstrip()}
+
+
+def run_tests():
+    # TODO: replay the example operations
+    pass
+"""
+    elif "pythondata" in snippets:
+        # Database problem solved with pandas
+        snippet = snippets["pythondata"].rstrip()
+        outputs = parse_table_outputs(details["content"])
+        tests = build_database_tests(meta["name"], snippet, test_cases, outputs)
+        body = f"""
+{snippet}
+    pass
+
+
+{DB_HELPER}
+
+def run_tests():
+{tests}
+"""
+    else:
+        # Shell / anything without a Python template: keep the original as a comment
+        langs = ", ".join(snippets) or "none"
+        original = "\n".join(
+            "# " + line for line in next(iter(snippets.values()), "").splitlines()
+        )
+        body = f"""
+# No Python template for this problem (available: {langs}).
+{original}
+
+
+def run_tests():
+    pass
+"""
+
+    content = header + body + footer
+
     filename = f"{number:04d}_{file_title}.py"
     dest = os.path.join(python_dir, filename)
 
-    with open(dest, "w") as f:
+    with open(dest, "w", encoding="utf-8") as f:
         f.write(content)
 
     print(f"Created: main/{filename}  [{difficulty}]")
