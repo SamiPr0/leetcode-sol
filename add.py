@@ -171,8 +171,15 @@ def main():
     file_title = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")
 
     py_snippet = next(
-        s["code"] for s in details["codeSnippets"] if s["langSlug"] == "python"
+        (s["code"] for s in details["codeSnippets"] or [] if s["langSlug"] == "python"),
+        None,
     )
+    if py_snippet is None:
+        print(
+            f"Problem {number} ({title}) has no Python template "
+            "(likely a SQL/Database or Shell problem), so it can't be generated."
+        )
+        sys.exit(1)
     meta = json.loads(details["metaData"])
     method_name = meta["name"]
     params = meta["params"]
