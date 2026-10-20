@@ -4,68 +4,148 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LeetCode Tracker</title>
+<meta name="description" content="Progress tracker for my LeetCode solutions in Python.">
 <style>
   :root {
-    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --card: #ffffff; --line: #e7e5e4;
-    --easy: #4c8b5e; --medium: #a8902f; --hard: #b04a4a; --accent: #2563eb;
+    --bg: #f5f4ef; --surface: #ffffff; --surface-2: #efede6; --ink: #1c1b18; --muted: #6f6c63;
+    --line: #e4e1d7; --accent: #3b5bdb;
+    --easy: #2f8f5b; --medium: #b7860b; --hard: #c24141;
+    --shadow: 0 1px 2px rgb(30 25 10 / .05), 0 8px 24px -12px rgb(30 25 10 / .12);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #141413; --fg: #f5f5f4; --muted: #a8a29e; --card: #1c1b1a; --line: #2e2c2a;
-      --easy: #6cb582; --medium: #d4bd5c; --hard: #d97878; --accent: #60a5fa;
+      --bg: #0f0f0e; --surface: #181817; --surface-2: #222220; --ink: #f1efe8; --muted: #9a968b;
+      --line: #2a2926; --accent: #8ea2ff;
+      --easy: #5ec28a; --medium: #e0b84a; --hard: #ee7b7b; --shadow: none;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #141413; --fg: #f5f5f4; --muted: #a8a29e; --card: #1c1b1a; --line: #2e2c2a;
-    --easy: #6cb582; --medium: #d4bd5c; --hard: #d97878; --accent: #60a5fa;
+    --bg: #0f0f0e; --surface: #181817; --surface-2: #222220; --ink: #f1efe8; --muted: #9a968b;
+    --line: #2a2926; --accent: #8ea2ff;
+    --easy: #5ec28a; --medium: #e0b84a; --hard: #ee7b7b; --shadow: none;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { margin: 0 0 4px; font-size: 1.6rem; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
-  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-          padding: 8px 14px; min-width: 96px; }
-  .stat b { display: block; font-size: 1.4rem; line-height: 1.2; }
-  .stat span { color: var(--muted); font-size: .8rem; }
-  .Easy b { color: var(--easy); } .Medium b { color: var(--medium); } .Hard b { color: var(--hard); }
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  input[type=search] { flex: 1 1 200px; padding: 8px 12px; border-radius: 8px; font: inherit;
-         border: 1px solid var(--line); background: var(--card); color: var(--fg); }
-  button.f { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer;
-         background: var(--card); color: var(--fg); font: inherit; }
-  button.f[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
-  table { width: 100%; border-collapse: collapse; background: var(--card);
-          border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
-  th { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  tr:last-child td { border-bottom: 0; }
-  td.n { color: var(--muted); width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
-  td.c { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; color: var(--muted); }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .dot.Easy { background: var(--easy); } .dot.Medium { background: var(--medium); }
-  .dot.Hard { background: var(--hard); }
-  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
-  .msg { color: var(--muted); padding: 24px 0; }
-  @media (max-width: 560px) { th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6) { display: none; } }
+  html { color-scheme: light dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 16px 80px; }
+  .mono { font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 28px; }
+  h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.2rem); letter-spacing: -.02em; line-height: 1.15; }
+  .sub { margin: 6px 0 0; color: var(--muted); font-size: .95rem; }
+  .sub a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  .sub a:hover { color: var(--ink); }
+  .theme {
+    flex: none; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink); cursor: pointer; font-size: 1.05rem; line-height: 1;
+  }
+  .theme:hover { border-color: var(--muted); }
+
+  .summary {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 22px; box-shadow: var(--shadow); margin-bottom: 28px;
+  }
+  .total { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+  .total b { font-size: 2.8rem; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .total span { color: var(--muted); }
+  .bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--surface-2); gap: 2px; }
+  .bar i { display: block; height: 100%; transition: width .5s ease; }
+  .bar .Easy { background: var(--easy); } .bar .Medium { background: var(--medium); } .bar .Hard { background: var(--hard); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 14px; font-size: .9rem; color: var(--muted); }
+  .legend b { color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
+  .dot.Easy { background: var(--easy); } .dot.Medium { background: var(--medium); } .dot.Hard { background: var(--hard); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .search { position: relative; flex: 1 1 220px; }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  input[type=search] {
+    width: 100%; height: 42px; padding: 0 14px 0 38px; border-radius: 12px; font: inherit; font-size: .95rem;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink); outline: none;
+  }
+  input[type=search]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    height: 42px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+    color: var(--muted); font: inherit; font-size: .9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--muted); }
+  .chip[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .chip small { opacity: .65; font-size: .8rem; font-variant-numeric: tabular-nums; }
+
+  .list { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
+  .row {
+    display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 14px;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); transition: background .12s;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: var(--surface-2); }
+  .num { color: var(--muted); text-align: right; font-size: .9rem; font-variant-numeric: tabular-nums; }
+  .title { min-width: 0; }
+  .title a { color: var(--ink); text-decoration: none; font-weight: 550; }
+  .title a:hover { color: var(--accent); }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tag { font-size: .74rem; color: var(--muted); background: var(--surface-2); padding: 1px 8px; border-radius: 6px; }
+  .pill {
+    font-size: .78rem; font-weight: 600; padding: 3px 11px; border-radius: 99px; white-space: nowrap;
+    color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent);
+  }
+  .pill.Easy { --c: var(--easy); } .pill.Medium { --c: var(--medium); } .pill.Hard { --c: var(--hard); }
+  .pill.Unknown { --c: var(--muted); }
+  .title a.lc { color: var(--muted); font-weight: 400; font-size: .85rem; margin-left: 4px; }
+  .title a.lc:hover { color: var(--accent); }
+
+  .state { padding: 48px 20px; text-align: center; color: var(--muted); }
+  .skeleton { height: 56px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(90deg, transparent, var(--surface-2), transparent); background-size: 200% 100%;
+    animation: shimmer 1.4s infinite linear; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skeleton, .bar i { animation: none; transition: none; } }
+  footer { margin-top: 28px; text-align: center; color: var(--muted); font-size: .82rem; }
+
+  @media (max-width: 600px) {
+    .wrap { padding-top: 28px; }
+    .row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; padding: 12px 14px; }
+    .total b { font-size: 2.3rem; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <h1>LeetCode Tracker</h1>
-  <p class="sub" id="sub">Loading from GitHub…</p>
-  <div class="stats" id="stats"></div>
-  <div class="controls">
-    <input type="search" id="q" placeholder="Search by number or title" aria-label="Search problems">
-    <button class="f" data-d="All" aria-pressed="true">All</button>
-    <button class="f" data-d="Easy" aria-pressed="false">Easy</button>
-    <button class="f" data-d="Medium" aria-pressed="false">Medium</button>
-    <button class="f" data-d="Hard" aria-pressed="false">Hard</button>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>LeetCode Tracker</h1>
+      <p class="sub" id="sub">Loading from GitHub…</p>
+    </div>
+    <button class="theme" id="theme" aria-label="Toggle light and dark theme" title="Toggle theme">◐</button>
+  </header>
+
+  <section class="summary" aria-label="Progress">
+    <div class="total"><b id="total">–</b><span>problems solved</span></div>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div class="toolbar">
+    <label class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="Search by number or title" aria-label="Search problems">
+    </label>
+    <div class="chips" id="chips" role="group" aria-label="Filter by difficulty"></div>
   </div>
-  <div id="out"></div>
-</main>
+
+  <div class="list" id="out" aria-live="polite">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+  <footer id="foot"></footer>
+</div>
+
 <script>
 // Repo is read from the page URL (user.github.io/repo); the constants are the fallback.
 const host = location.hostname.match(/^(.+)\.github\.io$/);
@@ -74,10 +154,23 @@ const REPO = (host && location.pathname.split("/")[1]) || "leetcode-sol";
 const BRANCH = "main", DIR = "main/";
 const RAW = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/`;
 const BLOB = `https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/`;
+const LEVELS = ["Easy", "Medium", "Hard"];
 
 let problems = [], diff = "All";
 const $ = (s) => document.querySelector(s);
-const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// Theme: follow the system unless the visitor picked one.
+function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; }
+try { applyTheme(localStorage.getItem("theme")); } catch (e) {}
+$("#theme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = dark ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("theme", next); } catch (e) {}
+});
 
 function parse(path, text) {
   const m = text.match(/Problem:\s*(\d+)\s*-\s*(.+)/);
@@ -102,40 +195,44 @@ async function load() {
   problems = parsed.filter(Boolean).sort((a, b) => a.number - b.number);
 }
 
-function render() {
+const count = (d) => problems.filter((p) => d === "All" || p.difficulty === d).length;
+
+function renderSummary() {
+  $("#total").textContent = problems.length;
+  $("#bar").innerHTML = LEVELS.map((d) => `<i class="${d}" style="width:${(count(d) / problems.length) * 100}%"></i>`).join("");
+  $("#legend").innerHTML = LEVELS.map((d) => `<span><span class="dot ${d}"></span><b>${count(d)}</b>${d}</span>`).join("");
+  $("#sub").innerHTML = `Python solutions · <a href="https://github.com/${OWNER}/${REPO}">${OWNER}/${REPO}</a>`;
+  $("#chips").innerHTML = ["All", ...LEVELS].map((d) =>
+    `<button class="chip" data-d="${d}" aria-pressed="${d === diff}">${d}<small>${count(d)}</small></button>`).join("");
+  document.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
+    diff = b.dataset.d;
+    document.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    renderList();
+  }));
+}
+
+function renderList() {
   const q = $("#q").value.trim().toLowerCase();
   const rows = problems.filter((p) =>
     (diff === "All" || p.difficulty === diff) &&
     (!q || String(p.number).includes(q) || p.title.toLowerCase().includes(q)));
-  $("#out").innerHTML = rows.length
-    ? `<table><thead><tr><th>#</th><th>Title</th><th>Level</th><th>Code</th><th>Time</th><th>Space</th></tr></thead><tbody>` +
-      rows.map((p) => `<tr>
-        <td class="n">${p.number}</td>
-        <td>${p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}</a>` : esc(p.title)}</td>
-        <td><span class="dot ${esc(p.difficulty)}"></span>${esc(p.difficulty)}</td>
-        <td><a href="${esc(p.code)}" target="_blank" rel="noopener">code</a></td>
-        <td class="c">${esc(p.time)}</td><td class="c">${esc(p.space)}</td></tr>`).join("") + `</tbody></table>`
-    : `<p class="msg">No problems match.</p>`;
+  $("#out").innerHTML = rows.length ? rows.map((p) => `
+    <div class="row">
+      <span class="num mono">${p.number}</span>
+      <div class="title">
+        <a href="${esc(p.code)}" target="_blank" rel="noopener">${esc(p.title)}</a>${p.link ? ` <a class="lc" href="${esc(p.link)}" target="_blank" rel="noopener" title="Open on LeetCode" aria-label="Open ${esc(p.title)} on LeetCode">↗</a>` : ""}
+        ${p.time || p.space ? `<div class="meta mono">${p.time ? `<span class="tag">time ${esc(p.time)}</span>` : ""}${p.space ? `<span class="tag">space ${esc(p.space)}</span>` : ""}</div>` : ""}
+      </div>
+      <span class="pill ${esc(p.difficulty)}">${esc(p.difficulty)}</span>
+    </div>`).join("") : `<div class="state">No problems match your filters.</div>`;
+  $("#foot").textContent = `${rows.length} of ${problems.length} shown`;
 }
 
-function stats() {
-  const c = (d) => problems.filter((p) => p.difficulty === d).length;
-  $("#stats").innerHTML =
-    `<div class="stat"><b>${problems.length}</b><span>Solved</span></div>` +
-    ["Easy", "Medium", "Hard"].map((d) => `<div class="stat ${d}"><b>${c(d)}</b><span>${d}</span></div>`).join("");
-  $("#sub").textContent = `Solutions in Python · ${OWNER}/${REPO}`;
-}
+$("#q").addEventListener("input", renderList);
 
-document.querySelectorAll("button.f").forEach((b) => b.addEventListener("click", () => {
-  diff = b.dataset.d;
-  document.querySelectorAll("button.f").forEach((x) => x.setAttribute("aria-pressed", x === b));
-  render();
-}));
-$("#q").addEventListener("input", render);
-
-load().then(() => { stats(); render(); }).catch((e) => {
+load().then(() => { renderSummary(); renderList(); }).catch((e) => {
   $("#sub").textContent = "Could not load problems.";
-  $("#out").innerHTML = `<p class="msg">${esc(String(e.message || e))}. GitHub's API allows 60 requests/hour without a token, so try again later.</p>`;
+  $("#out").innerHTML = `<div class="state">${esc(e.message || e)}.<br>GitHub's API allows 60 requests per hour without a token, so try again later.</div>`;
 });
 </script>
 </body>
